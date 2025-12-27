@@ -50,7 +50,8 @@ def bulletize(text: str) -> List[str]:
     chunks = [c.strip() for c in chunks if c.strip()]
 
     # If it looks like no bullets were found, split into sentences as fallback
-    if len(chunks) <= 2:
+    # Only fallback when we found 1 or 0 chunks — if we found 2+ bullets, keep them.
+    if len(chunks) <= 1:
         chunks = re.split(r"(?<=[.!?])\s+", text)
         chunks = [c.strip() for c in chunks if len(c.strip()) > 20]
 

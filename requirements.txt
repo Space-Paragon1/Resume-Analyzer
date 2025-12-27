@@ -5,4 +5,6 @@ scikit-learn>=1.5.1
 numpy==2.2.4
 pandas==2.2.2
 PyMuPDF==1.24.9
+pytest
+pytest-cov
 
