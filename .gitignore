@@ -38,3 +38,4 @@ pytest_cache/
 # Uncomment if you store datasets or exported reports locally
 # data/
 # *.json
+.venv311/
