@@ -95,3 +95,27 @@ Usage
    - Custom skill dictionary upload
    - PDF report export
    - Improved resume section detection
+
+   ---
+
+   **Run Locally (Lightweight)**
+   - **Setup:** Create and activate a Python virtual environment, then install the lightweight dependencies:
+      - `py -3.11 -m venv .venv`
+      - `.\.venv\Scripts\python -m pip install --upgrade pip`
+      - `.\.venv\Scripts\python -m pip install -r requirements-light.txt`
+   - **Run:** `.\.venv\Scripts\python -m streamlit run app/app.py`
+   - **When you need full embeddings locally:** install the full `requirements.txt` into a separate environment (it may pull `torch` which is large):
+      - `.\.venv\Scripts\python -m pip install -r requirements.txt`
+
+   **If you need to track large files (Git LFS)**
+   - **Install Git LFS:** (one-time)
+      - Windows (recommended): install from https://git-lfs.github.com or use `choco` / `winget`.
+      - Then run: `git lfs install`
+   - **Track files with LFS:**
+      - `git lfs track "path/to/large-file.ext"`
+      - `git add .gitattributes` and commit.
+   - **Migrate existing large files into LFS (history rewrite):** use with caution; this rewrites history and requires collaborators to re-clone.
+      - `git lfs migrate import --include=".venv311/**" --include-ref=refs/heads/main`
+      - `git push --force` (after verifying the migration)
+
+   **Recommendation:** Do not commit virtual environments. Use `.gitignore` to exclude them (for example `.venv/` or `.venv311/`). If you need to store large models, prefer external storage (S3, Hugging Face Hub) or Git LFS.

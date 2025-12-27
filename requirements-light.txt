@@ -1,0 +1,9 @@
+streamlit==1.38.0
+scikit-learn>=1.5.1
+numpy==2.2.4
+pandas==2.2.2
+PyMuPDF==1.24.9
+
+# NOTE: This lightweight file excludes heavy ML libraries (e.g. torch, sentence-transformers).
+# If you need embeddings locally (sentence-transformers + torch), install the full
+# `requirements.txt` or add those packages manually in a separate environment.
