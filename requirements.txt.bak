@@ -1,0 +1,8 @@
+streamlit==1.38.0
+sentence-transformers==3.0.1
+scikit-learn>=1.5.1
+# Use a NumPy 2.x wheel compatible with Python 3.13
+numpy==2.2.4
+pandas==2.2.2
+PyMuPDF==1.24.9
+
