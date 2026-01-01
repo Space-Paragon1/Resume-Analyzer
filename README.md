@@ -119,3 +119,5 @@ Usage
       - `git push --force` (after verifying the migration)
 
    **Recommendation:** Do not commit virtual environments. Use `.gitignore` to exclude them (for example `.venv/` or `.venv311/`). If you need to store large models, prefer external storage (S3, Hugging Face Hub) or Git LFS.
+
+Phase 2 is upcoming
