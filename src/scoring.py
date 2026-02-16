@@ -1,7 +1,7 @@
 # src/scoring.py
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -16,15 +16,23 @@ def _score_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
         return np.zeros((a.shape[0], b.shape[0]))
     return cosine_similarity(a, b)
 
-def weighted_overall(section_scores: Dict[str, float]) -> float:
-    # Weights you can tweak
-    weights = {
-        "skills": 0.40,
-        "experience": 0.40,
-        "projects": 0.20
-    }
-    # If sections missing, redistribute to what exists
-    present = {k: v for k, v in weights.items() if k in section_scores}
+def weighted_overall(
+    section_scores: Dict[str, float],
+    weights: Optional[Dict[str, float]] = None,
+) -> float:
+    """Compute weighted overall score.
+
+    weights should sum to 1.0. If None, uses defaults: skills=0.40, exp=0.40, proj=0.20.
+    Missing sections are redistributed proportionally among present ones.
+    """
+    if weights is None:
+        weights = {
+            "skills": 0.40,
+            "experience": 0.40,
+            "projects": 0.20,
+        }
+    # Keep only sections that actually exist in section_scores
+    present = {k: weights[k] for k in weights if k in section_scores}
     if not present:
         return float(np.mean(list(section_scores.values()))) if section_scores else 0.0
 

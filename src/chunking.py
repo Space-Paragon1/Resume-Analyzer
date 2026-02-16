@@ -3,29 +3,83 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-RESUME_SECTION_HEADERS = [
-    "experience", "work experience",
-    "projects", "project experience",
-    "skills", "technical skills",
-    "education", "certifications", "leadership", "activities"
+# Canonical section keywords — matching is done by CONTAINS, so variants like
+# "Professional Experience" or "WORK EXPERIENCE" will all resolve correctly.
+_SECTION_KEYWORDS = [
+    "experience",
+    "projects",
+    "skills",
+    "education",
+    "certifications",
+    "leadership",
+    "activities",
+    "publications",
+    "awards",
+    "volunteer",
+    "summary",
+    "objective",
+    "profile",
+    "achievements",
 ]
+
+# Map keyword → canonical name used as dict key
+_KEYWORD_TO_CANONICAL: Dict[str, str] = {
+    "experience": "experience",
+    "projects": "projects",
+    "skills": "skills",
+    "education": "education",
+    "certifications": "certifications",
+    "leadership": "leadership",
+    "activities": "activities",
+    "publications": "publications",
+    "awards": "awards",
+    "volunteer": "volunteer",
+    "summary": "summary",
+    "objective": "summary",
+    "profile": "summary",
+    "achievements": "achievements",
+}
 
 def _normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip().lower())
 
+def _strip_decoration(line: str) -> str:
+    """Remove leading bullets, hashes, underscores, pipes common in resume headers."""
+    return re.sub(r"^[\s#\-\*•|_=]+", "", line).strip()
+
+def _detect_header(line: str) -> str | None:
+    """Return canonical section name if line looks like a resume section header, else None."""
+    cleaned = _strip_decoration(line)
+    normalized = _normalize(cleaned)
+
+    # Must be short (headers are rarely >60 chars) and not look like a bullet
+    if len(normalized) > 60:
+        return None
+
+    for keyword in _SECTION_KEYWORDS:
+        # CONTAINS check: "professional experience" → contains "experience"
+        if keyword in normalized:
+            return _KEYWORD_TO_CANONICAL[keyword]
+
+    return None
+
 def split_into_sections(resume_text: str) -> Dict[str, str]:
     """
-    Heuristic section splitter: finds common headers and splits resume text.
-    Falls back to 'full' if headers aren't found.
+    Fuzzy section splitter: handles varied header styles including
+    ALL-CAPS, decorated (## / -- / •), and multi-word variants.
+    Falls back to 'full' key if no headers are found.
     """
-    text = resume_text
-    lines = [ln.strip() for ln in text.splitlines()]
-    # Track where headers appear
-    header_positions = []
+    lines = [ln.strip() for ln in resume_text.splitlines()]
+    header_positions: List[tuple[int, str]] = []
+
     for i, ln in enumerate(lines):
-        n = _normalize(ln)
-        if n in RESUME_SECTION_HEADERS:
-            header_positions.append((i, n))
+        canonical = _detect_header(ln)
+        if canonical is not None:
+            # Avoid treating a line as a header if it has a lot of content
+            # (real headers are short; experience bullets may contain "experience")
+            word_count = len(ln.split())
+            if word_count <= 6:
+                header_positions.append((i, canonical))
 
     if not header_positions:
         return {"full": resume_text.strip()}
@@ -34,12 +88,16 @@ def split_into_sections(resume_text: str) -> Dict[str, str]:
     for idx, (start_i, header) in enumerate(header_positions):
         end_i = header_positions[idx + 1][0] if idx + 1 < len(header_positions) else len(lines)
         body = "\n".join(lines[start_i + 1:end_i]).strip()
-        sections[header] = body
+        # If same canonical key appears twice, append rather than overwrite
+        if header in sections:
+            sections[header] = sections[header] + "\n" + body
+        else:
+            sections[header] = body
     return sections
 
 def bulletize(text: str) -> List[str]:
     """
-    Split into bullet-like chunks. Works for '-' '•' '*' and also sentences if needed.
+    Split into bullet-like chunks. Works for '-' '•' '*' and also sentences.
     """
     text = text.strip()
     if not text:
@@ -49,8 +107,7 @@ def bulletize(text: str) -> List[str]:
     chunks = re.split(r"(?:\n\s*[•\-\*]\s+)", "\n" + text)
     chunks = [c.strip() for c in chunks if c.strip()]
 
-    # If it looks like no bullets were found, split into sentences as fallback
-    # Only fallback when we found 1 or 0 chunks — if we found 2+ bullets, keep them.
+    # If no bullets found, split into sentences as fallback
     if len(chunks) <= 1:
         chunks = re.split(r"(?<=[.!?])\s+", text)
         chunks = [c.strip() for c in chunks if len(c.strip()) > 20]
@@ -61,10 +118,9 @@ def chunk_job_description(jd_text: str) -> List[str]:
     """
     Break JD into requirement/responsibility-like chunks.
     """
-    # Split on newlines & bullets, keep meaningful lines
     lines = [ln.strip() for ln in jd_text.splitlines() if ln.strip()]
-    # Merge short lines with next line to reduce fragmentation
-    merged = []
+    # Merge short lines with the previous one to reduce fragmentation
+    merged: List[str] = []
     buffer = ""
     for ln in lines:
         if len(ln) < 35 and buffer:
@@ -76,9 +132,7 @@ def chunk_job_description(jd_text: str) -> List[str]:
     if buffer:
         merged.append(buffer)
 
-    # Bulletize merged paragraphs too
-    chunks = []
+    chunks: List[str] = []
     for m in merged:
         chunks.extend(bulletize(m))
-    # Final cleanup: remove tiny chunks
     return [c for c in chunks if len(c) >= 25]

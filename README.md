@@ -1,123 +1,162 @@
 # Resume–Job Description Analyzer (AI)
 
-An AI-powered Streamlit web application that analyzes how well a resume matches a given job description.  
+An AI-powered Streamlit web application that analyzes how well a resume matches a given job description.
 It uses transformer-based sentence embeddings and practical heuristics to highlight strengths, gaps, and areas for improvement.
 
 ---
 
 ## Features
-- **Overall match score (0–100)** with section breakdown:
-  - Skills
-  - Experience
-  - Projects
-- **Weakest-covered job requirements** with closest matching resume bullets
-- **Suggested bullet rewrites** using metric-driven templates
-- **Missing skills detection** based on keyword analysis
-- **Skill evidence viewer** showing exact resume lines where skills appear
-- **Basic ATS checks** to flag common formatting issues
-- **Exportable JSON report** summarizing the analysis
+
+- **Overall match score (0–100)** with section breakdown (Skills, Experience, Projects)
+- **Adjustable section weights** — drag sliders in the sidebar to change how much each section contributes to the score
+- **Weakest-covered JD requirements** with the closest matching resume bullet shown for each gap
+- **AI-powered bullet rewrites** via Claude (Haiku) — provide an Anthropic API key in the sidebar; falls back to template-based rewrites if no key is set
+- **Expanded skill detection** — ~80 built-in skills covering SWE, DevOps, cloud, ML/AI, databases, and frameworks
+- **Dynamic JD skill extraction** — surfaces CamelCase / acronym tokens from the JD (e.g. LangChain, gRPC) that aren't in the built-in list
+- **Skill evidence viewer** showing exact resume lines where each skill appears
+- **Missing skills** grouped into Core / Tools & Platforms / Nice-to-have
+- **Enhanced ATS checks** covering formatting, contact info, section headers, Unicode characters, resume length, action verbs, LinkedIn/GitHub presence — with a positives summary
+- **Exportable JSON report** including scores, gaps, suggestions, weights, and timestamp
 
 ---
 
 ## Tech Stack
-- **Python**
-- **Streamlit** – user interface
-- **sentence-transformers** – semantic embeddings
-- **PyMuPDF** – PDF text extraction
+
+- **Python 3.10+**
+- **Streamlit** — user interface
+- **sentence-transformers** (`all-MiniLM-L6-v2`) — semantic embeddings
+- **scikit-learn** — cosine similarity
+- **PyMuPDF** — PDF text extraction
+- **anthropic** — Claude API for AI bullet rewrites (optional)
 
 ---
 
 ## Project Structure
+
+```
 resume-jd-analyzer/
 ├── app/
-│ └── app.py # Streamlit entry point
+│   └── app.py              # Streamlit entry point
 ├── src/
-│ ├── init.py
-│ ├── parsing.py
-│ ├── chunking.py
-│ ├── embeddings.py
-│ ├── scoring.py
-│ ├── skills.py
-│ ├── suggestions.py
-│ ├── evidence.py
-│ ├── ats.py
-│ └── reporting.py
-├── requirements.txt
-├── README.md
+│   ├── __init__.py
+│   ├── parsing.py          # PDF + text extraction
+│   ├── chunking.py         # Fuzzy section detection, bulletizing
+│   ├── embeddings.py       # Cached sentence-transformer wrapper
+│   ├── scoring.py          # Cosine similarity scoring, custom weights
+│   ├── skills.py           # Keyword + dynamic skill extraction
+│   ├── suggestions.py      # Template & Claude AI bullet rewrites
+│   ├── evidence.py         # Skill evidence finder
+│   ├── ats.py              # ATS heuristic checks
+│   └── reporting.py        # JSON report builder
+├── tests/
+├── requirements.txt        # Full dependencies (includes torch/sentence-transformers)
+├── requirements-light.txt  # Lightweight (no torch)
 └── .gitignore
-
+```
 
 ---
 
 ## Setup (Local)
 
-### 1. Create and activate a virtual environment (recommended)
+### 1. Create and activate a virtual environment
 
 **Windows (PowerShell):**
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+```
 
-**macOS/ Linux**
+**macOS / Linux:**
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
+```
 
-2. Install dependencies
+### 2. Install dependencies
+
+Full install (includes `sentence-transformers` + `torch`, ~1–2 GB):
+```bash
 pip install -r requirements.txt
+```
 
-3. Run the app
+Lightweight install (no torch — embeddings won't work locally but app boots faster for UI dev):
+```bash
+pip install -r requirements-light.txt
+```
+
+### 3. Run the app
+
+```bash
 streamlit run app/app.py
+```
 
-Usage
-1) Paste or upload your resume (PDF optional)
-2) Paste a job description
-3) Click Analyze
-4) Review:
-   - Match scores
-   - Weakest job requirements
+The app opens at **http://localhost:8501**.
+
+---
+
+## Usage
+
+1. Paste or upload your resume (PDF optional) in the left panel
+2. Paste the job description in the right panel
+3. *(Optional)* In the sidebar:
+   - Enter your **Anthropic API key** to enable AI-powered bullet rewrites
+   - Adjust the **section weight sliders** (Skills / Experience / Projects) to reflect the role's priorities
+4. Click **Analyze**
+5. Review:
+   - Match scores and section breakdown
+   - Weakest JD requirements (gaps to fix first)
    - Suggested resume bullet rewrites
    - Missing skills and skill evidence
-   - ATS feedback
-5) Download the JSON report via the Export report button
+   - Dynamic JD skills (niche tools extracted from the posting)
+   - ATS feedback (warnings, tips, and positives)
+6. Download the full **JSON report** via the Export button
 
-   Deployment
-   - This app is designed to be deployed on Streamlit Community Cloud.
-   - Main file path: app/app.py
-   - Ensure src/__init__.py exists to avoid import errors
+---
 
-   Notes & Limitations
-   - Skill detection is keyword-based and depends on the built-in skill list
-   - PDF text extraction quality depends on resume formatting
-   - Suggested bullet rewrites are templates and should be edited with truthful metrics
+## AI Bullet Rewrites
 
-   Future Improvements
-   - Rank resume against multiple job descriptions
-   - Custom skill dictionary upload
-   - PDF report export
-   - Improved resume section detection
+If you provide an Anthropic API key, bullet rewrites are generated by **Claude Haiku** with a prompt that enforces:
+- Strong action verb at the start
+- Metric placeholder (e.g. `[X%]`, `[$X]`) that you fill in with real numbers
+- Keywords from the JD requirement incorporated
+- One sentence under 120 characters
 
-   ---
+Without an API key, template-based rewrites are used as a fallback (always free, no key needed).
 
-   **Run Locally (Lightweight)**
-   - **Setup:** Create and activate a Python virtual environment, then install the lightweight dependencies:
-      - `py -3.11 -m venv .venv`
-      - `.\.venv\Scripts\python -m pip install --upgrade pip`
-      - `.\.venv\Scripts\python -m pip install -r requirements-light.txt`
-   - **Run:** `.\.venv\Scripts\python -m streamlit run app/app.py`
-   - **When you need full embeddings locally:** install the full `requirements.txt` into a separate environment (it may pull `torch` which is large):
-      - `.\.venv\Scripts\python -m pip install -r requirements.txt`
+Set the key as an environment variable to avoid pasting it each session:
+```bash
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
 
-   **If you need to track large files (Git LFS)**
-   - **Install Git LFS:** (one-time)
-      - Windows (recommended): install from https://git-lfs.github.com or use `choco` / `winget`.
-      - Then run: `git lfs install`
-   - **Track files with LFS:**
-      - `git lfs track "path/to/large-file.ext"`
-      - `git add .gitattributes` and commit.
-   - **Migrate existing large files into LFS (history rewrite):** use with caution; this rewrites history and requires collaborators to re-clone.
-      - `git lfs migrate import --include=".venv311/**" --include-ref=refs/heads/main`
-      - `git push --force` (after verifying the migration)
+# macOS / Linux
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
 
-   **Recommendation:** Do not commit virtual environments. Use `.gitignore` to exclude them (for example `.venv/` or `.venv311/`). If you need to store large models, prefer external storage (S3, Hugging Face Hub) or Git LFS.
+---
 
-Phase 2 is upcoming
+## Deployment (Streamlit Community Cloud)
+
+- Main file path: `app/app.py`
+- Add `ANTHROPIC_API_KEY` as a secret in the Streamlit Cloud dashboard if you want AI rewrites in production
+- Ensure `src/__init__.py` exists (it does) to avoid import errors
+
+---
+
+## Notes & Limitations
+
+- Skill detection is keyword-based; very niche skills may not appear in the built-in list (check the Dynamic JD skills tab)
+- PDF text extraction quality depends on resume formatting — plain single-column PDFs work best
+- AI bullet rewrites require real metric values to be filled in by the user
+- The `all-MiniLM-L6-v2` embedding model is fast but general-purpose; domain-specific fine-tuning would improve accuracy
+
+---
+
+## Running Tests
+
+```bash
+pytest tests/ -v
+```
+
+---
+
+**Recommendation:** Do not commit virtual environments. Use `.gitignore` to exclude `.venv/` and `.venv311/`. For large model files, use external storage (S3, Hugging Face Hub) or Git LFS.
